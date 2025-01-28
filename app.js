@@ -74,9 +74,10 @@ app.post("/webhooks", async (req, res) => {
       userSessions[from] = {
         userName: user_name,
         phoneNumber: from,
+        companyName: null,
         issueType: null,
         issueDescription: null,
-        stage: "menu", // Tracks the conversation stage
+        stage: "companyName", // Start by asking for company name
       };
     }
 
@@ -84,10 +85,14 @@ app.post("/webhooks", async (req, res) => {
 
     // Conversation flow
     let reply = "";
-    if (userSession.stage === "menu") {
-      reply = "Hello! Welcome to Green Enterprise Customer Support. How can we assist you today?\n1. Software Support\n2. Hardware Support\n3. Infrastructure Services\n4. Printing Support\n5. Other Issues";
+    if (userSession.stage === "companyName") {
+      reply = "Welcome to Green Enterprise Customer Support! Please provide your company name to proceed.";
+      userSession.stage = "awaitingCompanyName";
+    } else if (userSession.stage === "awaitingCompanyName") {
+      userSession.companyName = msg_body;
+      reply = `Thank you! How can we assist ${userSession.companyName} today?\n1. Software Support\n2. Hardware Support\n3. Infrastructure Services\n4. Printing Support\n5. Other Issues`;
       userSession.stage = "issueType";
-    } else if (userSession.stage === "issueType") {
+    }else if (userSession.stage === "issueType") {
       switch (msg_body) {
         case "1":
           userSession.issueType = "Software Issue";
