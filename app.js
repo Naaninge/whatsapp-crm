@@ -10,27 +10,29 @@ const token = process.env.TOKEN;
 const my_token = process.env.MY_TOKEN;
 
 // MongoDB setup
-const mongoURI = process.env.MONGO_URI; // Add your MongoDB URI to .env file
+const mongoURI = process.env.MONGO_URI;
 const client = new MongoClient(mongoURI);
 let database;
 
 (async () => {
   try {
     await client.connect();
-    database = client.db("customerSupport"); // Replace with your DB name
+    database = client.db("customerSupport");
     console.log("Connected to MongoDB");
   } catch (error) {
     console.error("Failed to connect to MongoDB:", error);
   }
 })();
 
+
+
 app.listen(PORT, () => {
   console.log(`Webhook is listening on port ${PORT}`);
 });
 
-// Store messages and user sessions
-const messages = [];
-const userSessions = {}; // Stores user data including issue details
+
+// Store user sessions
+const userSessions = {};
 
 // To verify the callback URL
 app.get("/webhooks", (req, res) => {
@@ -48,6 +50,7 @@ app.get("/webhooks", (req, res) => {
 });
 
 app.post("/webhooks", async (req, res) => {
+
   let body_param = req.body;
   console.log(JSON.stringify(body_param, null, 2));
 
@@ -69,7 +72,7 @@ app.post("/webhooks", async (req, res) => {
         ? body_param.entry[0].changes[0].value.contacts[0].profile.name
         : "Unknown";
 
-    // Initialize user session if not exists
+    // Check if user exists, if not send template message
     if (!userSessions[from]) {
       userSessions[from] = {
         userName: user_name,
@@ -77,22 +80,26 @@ app.post("/webhooks", async (req, res) => {
         companyName: null,
         issueType: null,
         issueDescription: null,
-        stage: "companyName", // Start by asking for company name
+        stage: "welcomeMessage", // Start with template message
       };
+
+      // Send WhatsApp Template Message instead of text
+      sendWhatsAppTemplateMessage(phone_no_id, from);
+      userSessions[from].stage = "companyName"; // Move to next stage
+      return res.sendStatus(200);
     }
 
     const userSession = userSessions[from];
-
-    // Conversation flow
     let reply = "";
+
     if (userSession.stage === "companyName") {
-      reply = "Welcome to Green Enterprise Customer Support! Please provide your company name to proceed.";
+      reply = "Please provide your company name to proceed.";
       userSession.stage = "awaitingCompanyName";
     } else if (userSession.stage === "awaitingCompanyName") {
       userSession.companyName = msg_body;
       reply = `Thank you! How can we assist ${userSession.companyName} today?\n1. Software Support\n2. Hardware Support\n3. Infrastructure Services\n4. Printing Support\n5. Other Issues`;
       userSession.stage = "issueType";
-    }else if (userSession.stage === "issueType") {
+    } else if (userSession.stage === "issueType") {
       switch (msg_body) {
         case "1":
           userSession.issueType = "Software Issue";
@@ -122,7 +129,7 @@ app.post("/webhooks", async (req, res) => {
         default:
           reply = "Invalid option. Please select a valid option:\n1. Software Support\n2. Hardware Support\n3. Infrastructure Services\n4. Printing Support\n5. Other Issues";
       }
-    } else if (userSession.stage === "specificIssue") {
+    } else if (userSession.stage === "specificIssue") { 
       if (msg_body === "6") {
         reply = "Please describe the issue you are facing.";
         userSession.stage = "issueDescription";
@@ -140,19 +147,20 @@ app.post("/webhooks", async (req, res) => {
 
         if (issueList && selectedIndex >= 0 && selectedIndex < issueList.length) {
           userSession.issueDescription = issueList[selectedIndex];
-          reply = `Thank you. Your ${userSession.issueType} (${userSession.issueDescription}) has been logged. It will be assigned to the appropriate team for resolution. Is there anything else I can help you with? (Yes/No)`;
-          userSession.stage = "confirmation";
+          reply = `Thank you. Your ${userSession.issueType} (${userSession.issueDescription}) has been logged. It will be assigned to the appropriate team for resolution. `;
+          userSession.stage = "endSession";
         } else {
           reply = "Invalid option. Please select a valid issue or type 6 for Other.";
         }
       }
     } else if (userSession.stage === "issueDescription") {
       userSession.issueDescription = msg_body;
-      reply = `Thank you for the details. Your issue with ${userSession.issueType} has been logged. It will be assigned to the appropriate team for resolution. Is there anything else I can help you with? (Yes/No)`;
-      userSession.stage = "confirmation";
-    } else if (userSession.stage === "confirmation") {
-      if (msg_body.toLowerCase() === "no") {
-        reply = "Thank you for contacting Green Enterprise Support. Have a great day!";
+      reply = `Thank you for the details. Your issue with ${userSession.issueType} has been logged.`;
+      userSession.stage = "endSession";
+    } else if (userSession.stage === "endSession") {
+
+      // last reply to the conversation
+      sendClosingMessageTemplate(phone_no_id, from)
 
         // Save session data to MongoDB
         try {
@@ -164,39 +172,319 @@ app.post("/webhooks", async (req, res) => {
         }
 
         delete userSessions[from]; // Clear session after conversation ends
-      } else {
-        reply = "Please select one of the following options:\n1. Software Support\n2. Hardware Support\n3. Infrastructure Services\n4. Printing Support\n5. Other Issues";
-        userSession.stage = "issueType";
-      }
+      
     }
-
-    axios({
-      method: "POST",
-      url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
-      data: {
-        messaging_product: "whatsapp",
-        to: from,
-        text: {
-          body: reply,
-        },
-      },
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then(() => {
-        console.log("Message sent successfully");
-      })
-      .catch((error) => {
-        console.error("Error sending message:", error.response ? error.response.data : error.message);
-      });
-
+    
+    sendWhatsAppMessage(phone_no_id, from, reply);
     res.sendStatus(200);
   } else {
     res.sendStatus(404);
   }
 });
 
-app.get("/", (req, res) => {
-  res.status(200).send("Webhook");
-});
+
+// Function to send a text message
+function sendWhatsAppMessage(phone_no_id, to, message) {
+  axios({
+    method: "POST",
+    url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+    data: {
+      messaging_product: "whatsapp",
+      to: to,
+      text: { body: message },
+    },
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .then(() => console.log("Message sent successfully"))
+    .catch((error) => console.error("Error sending message:", error.response ? error.response.data : error.message));
+}
+
+
+
+// Function to send a WhatsApp template message
+// function sendWhatsAppTemplateMessage(phone_no_id, to) {
+//   axios({
+//     method: "POST",
+//     url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+//     data: {
+//       messaging_product: "whatsapp",
+//       to: to,
+//       type: "template",
+//       template: {
+//         name: "welcome_prompt", // Ensure that the template name matches what is created on WhatsApp Business
+//         language: { code: "en_US" },
+//         components: [
+//           {
+//             type: "header",
+//             parameters: [
+//               {
+//                 type: "image",
+//                 image: {
+//                   link: "https://i.imgur.com/38Ml4DW.png" 
+//                 }
+//               }
+//             ]
+//           },
+//           {
+//             type: "body",
+//             parameters: [
+//               {
+//                 type: "text", // Ensure you are sending the correct number of parameters here
+//                 text: "Welcome to our Support Center!"
+//               },
+//               {
+//                 type: "text",
+//                 text: "Please select the type of issue you would like to report."
+//               }
+//             ]
+//           }
+//         ]
+//       }
+//     },
+//     headers: {
+//       "Content-Type": "application/json"
+//     }
+//   })
+//     .then(() => console.log("Template message sent successfully"))
+//     .catch(error => console.error("Error sending template message:", error.response ? error.response.data : error.message));
+// }
+
+function sendClosingMessageTemplate(phone_no_id, to) {
+  axios({
+    method: "POST",
+    url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+    data: {
+      messaging_product: "whatsapp",
+      to: to,
+      type: "template",
+      template: {
+        name: "closing_message", // Ensure that the template name matches what is created on WhatsApp Business
+        language: { code: "en_US" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              {
+                type: "text",
+                text: "Green Enterprise Solutions"
+              }
+            ]
+          },
+          {
+            type: "button",
+            sub_type: "url", // For website button
+            index: 0,
+            parameters: [
+              {
+                type: "text",
+                text: "Visit Website"
+              },
+              {
+                type: "text",
+                text: "https://green.com.na/" // Replace with your website URL
+              }
+            ]
+          },
+          {
+            type: "button",
+            sub_type: "phone_number", // For call button
+            index: 1,
+            parameters: [
+              {
+                type: "text",
+                text: "Contact Us"
+              },
+              {
+                type: "text",
+                text: "+26461 416 300" // Replace with your phone number
+              }
+            ]
+          }
+        ]
+      }
+    },
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+    .then(() => console.log("Closing message template sent successfully"))
+    .catch(error => console.error("Error sending closing message template:", error.response ? error.response.data : error.message));
+}
+
+
+
+function sendWhatsAppTemplateMessage(phone_no_id, to) {
+  axios({
+    method: "POST",
+    url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+    data: {
+      messaging_product: "whatsapp",
+      to: to,
+      type: "template",
+      template: {
+        name: "welcome_prompt", // Ensure that the template name matches what is created on WhatsApp Business
+        language: { code: "en_US" },
+        components: [
+          {
+            type: "header",
+            parameters: [
+              {
+                type: "image",
+                image: {
+                  link: "https://i.imgur.com/38Ml4DW.png" 
+                }
+              }
+            ]
+          },
+          {
+            type: "body",
+            parameters: [
+              {
+                type: "text", // Ensure you are sending the correct number of parameters here
+                text: "Green Enterprise Solutions"
+              },
+              {
+                type: "text",
+                text: "Green Support"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+    .then(() => console.log("Template message sent successfully"))
+    .catch(error => console.error("Error sending template message:", error.response ? error.response.data : error.message));
+}
+
+
+
+
+// Function to send an interactive list message for issueType
+function sendIssueTypeInteractiveList(phone_no_id, to) {
+  const messageData = {
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: to,
+    type: "interactive",
+    interactive: {
+      type: "list",
+      header: {
+        type: "text",
+        text: "Choose Issue Type"
+      },
+      body: {
+        text: "Please select the type of issue you are facing."
+      },
+      footer: {
+        text: "Support Center"
+      },
+      action: {
+        button: "Issue Types",
+        sections: [
+          {
+            title: "Software Issues",
+            rows: [
+              {
+                id: "software_1",
+                title: "Application not responding",
+                description: "Application is not opening or freezing"
+              },
+              {
+                id: "software_2",
+                title: "Software installation issue",
+                description: "Issue with installing software"
+              },
+              {
+                id: "software_3",
+                title: "Login/Password issue",
+                description: "Login or password-related issues"
+              },
+              {
+                id: "software_4",
+                title: "Update failure",
+                description: "Issue with software update"
+              }
+            ]
+          },
+          {
+            title: "Hardware Issues",
+            rows: [
+              {
+                id: "hardware_1",
+                title: "Device not powering on",
+                description: "Device won't turn on"
+              },
+              {
+                id: "hardware_2",
+                title: "Broken screen",
+                description: "Physical damage to screen"
+              },
+              {
+                id: "hardware_3",
+                title: "Peripheral not working",
+                description: "External devices not working"
+              }
+            ]
+          },
+          {
+            title: "Infrastructure Issues",
+            rows: [
+              {
+                id: "infrastructure_1",
+                title: "Network outage",
+                description: "No internet or network issues"
+              },
+              {
+                id: "infrastructure_2",
+                title: "Server not responding",
+                description: "Issue with server downtime"
+              },
+              {
+                id: "infrastructure_3",
+                title: "Database connectivity issue",
+                description: "Issue connecting to the database"
+              }
+            ]
+          },
+          {
+            title: "Printing Issues",
+            rows: [
+              {
+                id: "printing_1",
+                title: "Printer not responding",
+                description: "Printer is not turning on"
+              },
+              {
+                id: "printing_2",
+                title: "Paper jam",
+                description: "Issue with paper stuck in the printer"
+              },
+              {
+                id: "printing_3",
+                title: "Low print quality",
+                description: "Issue with print quality"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  };
+
+  axios({
+    method: "POST",
+    url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+    data: messageData,
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+    .then(() => console.log("Interactive list message sent successfully"))
+    .catch((error) => console.error("Error sending interactive list message:", error.response ? error.response.data : error.message));
+}
