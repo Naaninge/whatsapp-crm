@@ -188,6 +188,14 @@ function sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList)
 
 // Function to show the description of the issueType
 function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList) {
+  
+    if (msg_body === "0") {
+        // User wants to go back to issue type selection
+        sendIssueTypeMessage(phone_no_id, to, userSession.userName);
+        userSession.stage = "issueType";
+        return;
+    }
+
     let category = "";
 
     switch (msg_body) {

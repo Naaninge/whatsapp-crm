@@ -7,6 +7,7 @@ const {  selectIssue,
   sendWelcomeMessage, 
   sendWhatsAppMessage ,
   sendIssueTypeMessage} = require('./utils.js');
+const {sendDescrErrorMessage} = require('./errorMessages.js')
 
 
 const app = express().use(body_parser.json());
@@ -105,11 +106,20 @@ app.post("/webhooks", async (req, res) => {
     const userSession = userSessions[from];
     let reply = "";
 
+    // return to main menu
+    if (msg_body === "0") {
+      sendIssueTypeMessage(phone_no_id, from, userSession.userName);
+      userSession.stage = "issueType";
+      return res.sendStatus(200);
+  }
+   // get companyName from user 
    if (userSession.stage === "awaitingCompanyName") {
       userSession.companyName = msg_body;
+      // select the type of issue e.g. Software, Hardware
       sendIssueTypeMessage(phone_no_id,from,user_name) 
       userSession.stage = "issueType";
     } else if (userSession.stage === "issueType") {
+      // select type of issue description 
       selectIssue(msg_body, userSession, phone_no_id, from, issuesMap);
     } else if (userSession.stage === "specificIssue") { 
       if (msg_body === "6") {
@@ -126,7 +136,7 @@ app.post("/webhooks", async (req, res) => {
          // close  off conversation
          userSession.stage = "complete";
         } else {
-          reply = "Invalid option. Please select a valid issue or type 6 for Other.";
+          sendDescrErrorMessage(phone_no_id,from)
         }
       }
     } else if (userSession.stage === "issueDescription") {
