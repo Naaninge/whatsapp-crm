@@ -217,7 +217,9 @@ function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList) {
         case "5":
             userSession.issueType = "Other";
             userSession.stage = "issueDescription";
-            sendIssueDescriptionMessage(phone_no_id, to, userSession.issueType.split(" ")[0], descriptionList);
+            reply = "Please describe the issue you are facing.";
+            sendWhatsAppMessage(phone_no_id, to, reply);
+            
             return;
         default:
             sendIssueTypeMessage(phone_no_id, to, userSession.userName);
