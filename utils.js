@@ -222,7 +222,10 @@ function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList) {
             
             return;
         default:
-            sendIssueTypeMessage(phone_no_id, to, userSession.userName);
+            // add error message here
+            reply = "❌ Oops! I didn’t catch that. Please enter a valid option from 1 - 5. 😊🔄";
+            sendWhatsAppMessage(phone_no_id, to, reply);
+            // sendIssueTypeMessage(phone_no_id, to, userSession.userName);
             return;
     }
 
