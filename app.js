@@ -2,7 +2,11 @@ const express = require("express");
 const body_parser = require("body-parser");
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
-const {  selectIssue, sendClosingMessageTemplate, sendWelcomeMessage, sendWhatsAppMessage ,sendIssueTypeMessage} = require('./utils.js');
+const {  selectIssue, 
+  sendClosingMessageTemplate, 
+  sendWelcomeMessage, 
+  sendWhatsAppMessage ,
+  sendIssueTypeMessage} = require('./utils.js');
 
 
 const app = express().use(body_parser.json());
@@ -106,7 +110,7 @@ app.post("/webhooks", async (req, res) => {
       sendIssueTypeMessage(phone_no_id,from,user_name) 
       userSession.stage = "issueType";
     } else if (userSession.stage === "issueType") {
-       reply = selectIssue(msg_body,userSession)
+      selectIssue(msg_body, userSession, phone_no_id, from, issuesMap);
     } else if (userSession.stage === "specificIssue") { 
       if (msg_body === "6") {
         reply = "Please describe the issue you are facing.";
@@ -118,7 +122,8 @@ app.post("/webhooks", async (req, res) => {
 
         if (issueList && selectedIndex >= 0 && selectedIndex < issueList.length) {
           userSession.issueDescription = issueList[selectedIndex];
-         // end off conversation
+
+         // close  off conversation
          userSession.stage = "complete";
         } else {
           reply = "Invalid option. Please select a valid issue or type 6 for Other.";
@@ -126,7 +131,7 @@ app.post("/webhooks", async (req, res) => {
       }
     } else if (userSession.stage === "issueDescription") {
       userSession.issueDescription = msg_body;
-      // end off conversation
+      // close off conversation
       userSession.stage = "complete";
     } 
    if (userSession.stage === "complete") {

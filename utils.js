@@ -32,7 +32,7 @@ function sendWelcomeMessage(phone_no_id,to,username) {
         to: to,
         type: "template",
         template: {
-          name: "initial_message", // Ensure that the template name matches what is created on WhatsApp Business
+          name: "initial_message", 
           language: { code: "en_US" },
           components: [
             {
@@ -51,11 +51,11 @@ function sendWelcomeMessage(phone_no_id,to,username) {
               parameters: [
                 {
                   type: "text", 
-                  text: username,
+                  text:`Dear ${username}`,
                 },
                 {
                   type: "text",
-                  text: "Green Support"
+                  text: "Green Enterprise Solutions"
                 }
               ]
             }
@@ -70,7 +70,8 @@ function sendWelcomeMessage(phone_no_id,to,username) {
       .catch(error => console.error("Error sending template message:", error.response ? error.response.data : error.message));
     }
   
-    function sendIssueTypeMessage(phone_no_id,to,username) {
+    // Function to send  IssueTypes such as Software ,Hardware etc message
+function sendIssueTypeMessage(phone_no_id,to,username) {
         axios({
           method: "POST",
           url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
@@ -79,7 +80,7 @@ function sendWelcomeMessage(phone_no_id,to,username) {
             to: to,
             type: "template",
             template: {
-              name: "issue_type_message", // Ensure that the template name matches what is created on WhatsApp Business
+              name: "issue_type_message", 
               language: { code: "en" },
               components: [
                
@@ -103,8 +104,9 @@ function sendWelcomeMessage(phone_no_id,to,username) {
         .then(() => console.log("Template message sent successfully"))
           .catch(error => console.error("Error sending template message:", error.response ? error.response.data : error.message));
         }
-  
-    // Function to send closing off message
+
+    
+        // Function to send the final confrimation message 
     function sendClosingMessageTemplate(phone_no_id,to,company,issue,description) {
       axios({
           method: "POST",
@@ -123,7 +125,7 @@ function sendWelcomeMessage(phone_no_id,to,username) {
                       parameters: [
                         {
                           type: "text",
-                          text: company,
+                          text: company.toUpperCase(),
                         },
                         {
                           type: "text",
@@ -131,7 +133,7 @@ function sendWelcomeMessage(phone_no_id,to,username) {
                         },
                         {
                           type: "text",
-                          text: description,
+                          text: description.toUpperCase(),
                         }
                       ]
                   },
@@ -146,49 +148,82 @@ function sendWelcomeMessage(phone_no_id,to,username) {
           .then(() => console.log("Closing message template sent successfully"))
           .catch(error => console.error("Error sending closing message template:", JSON.stringify(error.response?.data || error.message, null, 2)));
   }
-  
- 
 
- 
- 
- // function to select issue description
-  function selectIssue(msg_body, userSession) {
-    let reply = ""; 
-  
-    switch (msg_body) {
-      case "1":
-        userSession.issueType = "Software Issue";
-        reply = "You’ve selected Software Issue. Is this related to:\n1. Application not responding\n2. Software installation issue\n3. Login/Password issue\n4. Update failure\n5. System error\n6. Other (Please describe)";
-        userSession.stage = "specificIssue";
-        break;
-      case "2":
-        userSession.issueType = "Hardware Issue";
-        reply = "You’ve selected Hardware Issue. Is this related to:\n1. Device not powering on\n2. Broken screen\n3. Peripheral not working\n4. Overheating\n5. Hardware compatibility\n6. Other (Please describe)";
-        userSession.stage = "specificIssue";
-        break;
-      case "3":
-        userSession.issueType = "Infrastructure Issue";
-        reply = "You’ve selected Infrastructure Issue. Is this related to:\n1. Network outage\n2. Server not responding\n3. Database connectivity issue\n4. Storage issue\n5. Backup failure\n6. Other (Please describe)";
-        userSession.stage = "specificIssue";
-        break;
-      case "4":
-        userSession.issueType = "Printing Issue";
-        reply = "You’ve selected Printing Issue. Is this related to:\n1. Printer not responding\n2. Paper jam\n3. Low print quality\n4. Printer driver issue\n5. Connectivity problem\n6. Other (Please describe)";
-        userSession.stage = "specificIssue";
-        break;
-      case "5":
-        userSession.issueType = "Other";
-        reply = "You’ve selected Other. Please describe the issue you are facing.";
-        userSession.stage = "issueDescription";
-        break;
-      default:
-        reply = `Invalid option. Please select a valid option (e.g., "1" for Software Support):\n1. Software Support\n2. Hardware Support\n3. Infrastructure Services\n4. Printing Support\n5. Other Issues`;
+// Function  to send the issue description message
+function sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList) {
+    if (!descriptionList[category] || descriptionList[category].length < 5) {
+        console.error(`Invalid category or insufficient descriptions for: ${category}`);
+        return;
     }
+
+    try {
+        axios.post(
+            `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+            {
+                messaging_product: "whatsapp",
+                to: to,
+                type: "template",
+                template: {
+                    name: "issue_description_message", 
+                    language: { code: "en" },
+                    components: [
+                        {
+                            type: "body",
+                            parameters: [
+                                { type: "text", text: `${category.toUpperCase()} SUPPORT` },
+                                ...descriptionList[category].slice(0, 5).map(text => ({ type: "text", text })),
+                                { type: "text", text: "Other (Please describe)" },
+                            ],
+                        },
+                    ],
+                },
+            },
+            { headers: { "Content-Type": "application/json" } }
+        );
+        console.log("Template message sent successfully");
+    } catch (error) {
+        console.error("Error sending template message:", error.response ? error.response.data : error.message);
+    }
+}
+
+// Function to show the description of the issueType
+function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList) {
+    let category = "";
+
+    switch (msg_body) {
+        case "0":
+            sendIssueTypeMessage(phone_no_id, to, userSession.userName);
+            break;
+        case "1":
+            userSession.issueType = "Software Issue";
+            break;
+        case "2":
+            userSession.issueType = "Hardware Issue";
+            break;
+        case "3":
+            userSession.issueType = "Infrastructure Issue";
+            break;
+        case "4":
+            userSession.issueType = "Printing Issue";
+            break;
+        case "5":
+            userSession.issueType = "Other";
+            userSession.stage = "issueDescription";
+            sendIssueDescriptionMessage(phone_no_id, to, userSession.issueType.split(" ")[0], descriptionList);
+            return;
+        default:
+            sendIssueTypeMessage(phone_no_id, to, userSession.userName);
+            return;
+    }
+
+    category = userSession.issueType.split(" ")[0];
+    sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList);
+    userSession.stage = "specificIssue";
+}
   
-    return reply;
-  }
+ 
+ 
   
 
 
-
-module.exports = {selectIssue,sendWelcomeMessage,sendClosingMessageTemplate,sendWhatsAppMessage,sendIssueTypeMessage}
+module.exports = {selectIssue,sendWelcomeMessage,sendClosingMessageTemplate,sendWhatsAppMessage,sendIssueTypeMessage,sendIssueDescriptionMessage}
