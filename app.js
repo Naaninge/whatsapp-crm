@@ -223,7 +223,7 @@ app.get("/webhooks", (req, res) => {
       if (userSession.stage === "awaitingCompanyName") {
         userSession.companyName = msg_body;
         userSession.stage = "awaitingName";
-         reply = "Please provide us with your full name. \n EXAMPLE: Thomas Roads"
+         reply = "Please provide us with your full name.\nSee EXAMPLE:\nThomas Roads"
       
       } else if(userSession.stage == "awaitingName"){
        userSession.fullName = msg_body;
