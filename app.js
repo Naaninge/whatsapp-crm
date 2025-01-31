@@ -195,6 +195,7 @@ app.get("/webhooks", (req, res) => {
       if (!userSessions[from]) {
         userSessions[from] = {
           userName: user_name,
+          fullName: null,
           phoneNumber: from,
           companyName: null,
           issueType: null,
@@ -216,15 +217,23 @@ app.get("/webhooks", (req, res) => {
         userSession.stage = "issueType";
         return res.sendStatus(200);
       }
-  
+    
+       
       // Get company name from user
       if (userSession.stage === "awaitingCompanyName") {
         userSession.companyName = msg_body;
-        sendCustomerSupportList(phone_no_id, from, user_name);
-        userSession.stage = "issueType";
-      } else if (userSession.stage === "issueType") {
+        userSession.stage = "awaitingName";
+         reply = "Please provide us with your full name. \n EXAMPLE: Thomas Roads"
+      
+      } else if(userSession.stage == "awaitingName"){
+       userSession.fullName = msg_body;
+       userSession.stage = "issueType";
+      sendCustomerSupportList(phone_no_id, from, userSession.fullName);
+       
+      }
+      else if (userSession.stage === "issueType") {
         userSession.issueType = msg_body; // Store the selected category
-        selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,user_name)
+        selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,userSession.fullName)
         userSession.stage = "specificIssue";
       } else if (userSession.stage === "specificIssue") {
         if (msg_body === "6") {
