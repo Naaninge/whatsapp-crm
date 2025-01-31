@@ -212,7 +212,7 @@ app.get("/webhooks", (req, res) => {
   
       // Return to main menu
       if (msg_body === "0") {
-        sendIssueTypeMessage(phone_no_id, from, userSession.userName);
+        sendCustomerSupportList(phone_no_id,from, user_name);
         userSession.stage = "issueType";
         return res.sendStatus(200);
       }
@@ -224,7 +224,7 @@ app.get("/webhooks", (req, res) => {
         userSession.stage = "issueType";
       } else if (userSession.stage === "issueType") {
         userSession.issueType = msg_body; // Store the selected category
-        selectIssue(msg_body, userSession, phone_no_id, from, issuesMap)
+        selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,user_name)
         userSession.stage = "specificIssue";
       } else if (userSession.stage === "specificIssue") {
         if (msg_body === "6") {

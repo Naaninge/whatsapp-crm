@@ -2,6 +2,7 @@ const axios = require("axios");
 require("dotenv").config();
 const token = process.env.TOKEN;
 
+
  
 
  // Function to send a response text message
@@ -187,11 +188,11 @@ function sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList)
 }
 
 // Function to show the description of the issueType
-function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList) {
+function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList,username) {
   
     if (msg_body === "0") {
         // User wants to go back to issue type selection
-        sendIssueTypeMessage(phone_no_id, to, userSession.userName);
+        sendCustomerSupportList(phone_no_id,to, username);
         userSession.stage = "issueType";
         return;
     }
@@ -199,9 +200,6 @@ function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList) {
     let category = "";
 
     switch (msg_body) {
-        case "0":
-            sendIssueTypeMessage(phone_no_id, to, userSession.userName);
-            break;
         case "software_support":
             userSession.issueType = "Software Issue";
             break;
@@ -252,7 +250,7 @@ function sendCustomerSupportList(phone_no_id, to, username) {
           text: "Customer Support Services"
         },
         body: {
-          text: `Hello ${username}, how can we assist you today? Please select a service below.`
+          text: `${username}, how can we assist you today? Please select a service below.`
         },
         footer: {
           text: "Powered by Green Enterprise "
@@ -282,8 +280,7 @@ function sendCustomerSupportList(phone_no_id, to, username) {
   .catch(error => console.error("Error sending message:", error.response ? error.response.data : error.message));
 }
 
-// Example usage
-// sendCustomerSupportList("1234567890", "recipient_phone_number", "John Doe", "your_access_token");
+
 
 
 
