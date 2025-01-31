@@ -202,19 +202,19 @@ function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList) {
         case "0":
             sendIssueTypeMessage(phone_no_id, to, userSession.userName);
             break;
-        case "1":
+        case "software_support":
             userSession.issueType = "Software Issue";
             break;
-        case "2":
+        case "hardware_support":
             userSession.issueType = "Hardware Issue";
             break;
-        case "3":
+        case "infrastructure":
             userSession.issueType = "Infrastructure Issue";
             break;
-        case "4":
+        case "printing":
             userSession.issueType = "Printing Issue";
             break;
-        case "5":
+        case "other":
             userSession.issueType = "Other";
             userSession.stage = "issueDescription";
             reply = "Please describe the issue you are facing.";
@@ -222,8 +222,8 @@ function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList) {
             
             return;
         default:
-            // add error message here
-            reply = "❌ Oops! I didn’t catch that. Please enter a valid option from 1 - 5. 😊🔄";
+            // error message 
+            reply = "❌ Oops! I didn’t catch that. Please enter a valid option . 😊🔄";
             sendWhatsAppMessage(phone_no_id, to, reply);
             // sendIssueTypeMessage(phone_no_id, to, userSession.userName);
             return;
@@ -235,8 +235,56 @@ function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList) {
 }
   
  
- 
-  
+          
+// Function to send whatsapp list
+function sendCustomerSupportList(phone_no_id, to, username) {
+  axios({
+    method: "POST",
+    url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+    data: {
+      messaging_product: "whatsapp",
+      to: to,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        header: {
+          type: "text",
+          text: "Customer Support Services"
+        },
+        body: {
+          text: `Hello ${username}, how can we assist you today? Please select a service below.`
+        },
+        footer: {
+          text: "Powered by Green Enterprise "
+        },
+        action: {
+          button: "Select Service",
+          sections: [
+            {
+              title: "Support Categories",
+              rows: [
+                { id: "software_support", title: "Software Support", description: "Assistance with software installation, troubleshooting, and updates." },
+                { id: "hardware_support", title: "Hardware Support", description: "Issues related to computers, servers, and other hardware." },
+                { id: "infrastructure", title: "Infrastructure Support", description: "Networking, cloud services, and IT infrastructure solutions." },
+                { id: "printing", title: "Printing Support", description: "Printer setup, maintenance, and troubleshooting." },
+                { id: "other", title: "Other Inquiries", description: "General IT support and consultations." }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+  .then(() => console.log("Customer support list message sent successfully"))
+  .catch(error => console.error("Error sending message:", error.response ? error.response.data : error.message));
+}
+
+// Example usage
+// sendCustomerSupportList("1234567890", "recipient_phone_number", "John Doe", "your_access_token");
 
 
-module.exports = {selectIssue,sendWelcomeMessage,sendClosingMessageTemplate,sendWhatsAppMessage,sendIssueTypeMessage,sendIssueDescriptionMessage}
+
+module.exports = {selectIssue,sendWelcomeMessage,sendClosingMessageTemplate,sendWhatsAppMessage,sendIssueTypeMessage,sendIssueDescriptionMessage,sendCustomerSupportList}
