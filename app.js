@@ -236,23 +236,23 @@ app.get("/webhooks", (req, res) => {
       else if(userSession.stage == "awaitingEmail"){
         userSession.email = msg_body;
         userSession.stage = "issueType";
-      sendCustomerSupportList(phone_no_id, from, userSession.fullName);
+       sendCustomerSupportList(phone_no_id, from, userSession.fullName);
       }
       else if (userSession.stage === "issueType") {
         userSession.issueType = msg_body; // Store the selected category
         selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,userSession.fullName)
         userSession.stage = "specificIssue";
       } else if (userSession.stage === "specificIssue") {
-        if (msg_body === "6") {
+        if (msg_body === "other") {
           reply = "Please describe the issue you are facing.";
           userSession.stage = "issueDescription";
         } else {
-          const category = userSession.issueType.split(" ")[0];
-          const issueList = issuesMap[category];
-          const selectedIndex = parseInt(msg_body) - 1;
+          const selectedMsg = msg_body
+          console.log(selectedMsg);
+          const selectedDescription = selectedMsg || "No description provided.";
   
-          if (issueList && selectedIndex >= 0 && selectedIndex < issueList.length) {
-            userSession.issueDescription = issueList[selectedIndex];
+          if (selectedDescription) {
+            userSession.issueDescription = selectedDescription;
             userSession.stage = "complete";
           } else {
             sendDescrErrorMessage(phone_no_id, from);

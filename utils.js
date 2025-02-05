@@ -150,41 +150,107 @@ function sendIssueTypeMessage(phone_no_id,to,username) {
   }
 
 // Function  to send the issue description message
-function sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList) {
-    if (!descriptionList[category] || descriptionList[category].length < 5) {
-        console.error(`Invalid category or insufficient descriptions for: ${category}`);
-        return;
-    }
+// function sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList) {
+//     if (!descriptionList[category] || descriptionList[category].length < 5) {
+//         console.error(`Invalid category or insufficient descriptions for: ${category}`);
+//         return;
+//     }
 
-    try {
-        axios.post(
-            `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+//     try {
+//         axios.post(
+//             `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+//             {
+//                 messaging_product: "whatsapp",
+//                 to: to,
+//                 type: "template",
+//                 template: {
+//                     name: "issue_description_message", 
+//                     language: { code: "en" },
+//                     components: [
+//                         {
+//                             type: "body",
+//                             parameters: [
+//                                 { type: "text", text: `${category.toUpperCase()} SUPPORT` },
+//                                 ...descriptionList[category].slice(0, 5).map(text => ({ type: "text", text })),
+//                                 { type: "text", text: "Other (Please describe)" },
+//                             ],
+//                         },
+//                     ],
+//                 },
+//             },
+//             { headers: { "Content-Type": "application/json" } }
+//         );
+//         console.log("Template message sent successfully");
+//     } catch (error) {
+//         console.error("Error sending template message:", error.response ? error.response.data : error.message);
+//     }
+// }
+
+
+
+function sendIssueDescriptionMessage(phone_no_id, to, category,descriptionList) {
+  // Get issues from issuesMap
+  const issues = descriptionList[category];
+ 
+  if (!issues || issues.length === 0) {
+    console.error(`No issues found for category: ${category}`);
+    return;
+  }
+  
+
+  console.log(issues)
+  // Maps issues into WhatsApss Interactive List format
+  const rows = issues.map((issue, index) => ({
+    id: `${category.toLowerCase()}_issue_${index + 1}`,
+    title:category,
+    description: issue
+  }));
+  console.log(rows)
+ 
+   // If no issues exist for the category, send a fallback message
+   if (rows.length === 0) {
+    console.error(`No issues found for category: ${category}`);
+    return;
+  }
+  axios({
+    method: "POST",
+    url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+    data: {
+      messaging_product: "whatsapp",
+      to: to,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        header: {
+          type: "text",
+          text: `${category} Issues`
+        },
+        body: {
+          text: `Please select a ${category} description below: `
+        },
+        footer: {
+          text: "Powered by Green Enterprise "
+        },
+        action: {
+          button: "Select Description",
+          sections: [
             {
-                messaging_product: "whatsapp",
-                to: to,
-                type: "template",
-                template: {
-                    name: "issue_description_message", 
-                    language: { code: "en" },
-                    components: [
-                        {
-                            type: "body",
-                            parameters: [
-                                { type: "text", text: `${category.toUpperCase()} SUPPORT` },
-                                ...descriptionList[category].slice(0, 5).map(text => ({ type: "text", text })),
-                                { type: "text", text: "Other (Please describe)" },
-                            ],
-                        },
-                    ],
-                },
-            },
-            { headers: { "Content-Type": "application/json" } }
-        );
-        console.log("Template message sent successfully");
-    } catch (error) {
-        console.error("Error sending template message:", error.response ? error.response.data : error.message);
+              
+              title: `${category}`,
+              rows: rows
+            }
+          ]
+        }
+      }
+    },
+    headers: {
+      "Content-Type": "application/json"
     }
+  })
+  .then(() => console.log("Customer support list message sent successfully"))
+  .catch(error => console.error("Error sending message:", error.response ? error.response.data : error.message));
 }
+
 
 // Function to show the description of the issueType
 function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList,username) {

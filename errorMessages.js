@@ -23,7 +23,7 @@ function sendDescrErrorMessage(phone_no_id,to) {
               parameters: [
                 {
                   type: "text", 
-                  text: "6",
+                  text: "other",
                 },
                 {
                     type: "text", 
