@@ -3,7 +3,6 @@ require("dotenv").config();
 const token = process.env.TOKEN;
 
 
- 
 
  // Function to send a response text message
 function sendWhatsAppMessage(phone_no_id,to, message) {
@@ -223,7 +222,6 @@ function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList,use
             // error message 
             reply = "❌ Oops! I didn’t catch that. Please enter a valid option . 😊🔄";
             sendWhatsAppMessage(phone_no_id, to, reply);
-            // sendIssueTypeMessage(phone_no_id, to, userSession.userName);
             return;
     }
 

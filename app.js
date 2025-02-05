@@ -64,6 +64,7 @@ app.get("/webhooks", (req, res) => {
 
 
 
+
 //   let body_param = req.body;
 //   console.log(JSON.stringify(body_param, null, 2));
 
@@ -186,16 +187,19 @@ app.get("/webhooks", (req, res) => {
       // Check if it's a text message or interactive reply
       let msg_body = message.text?.body || message.interactive?.list_reply?.id;
   
+      // add session timer 
       if (!msg_body) {
         console.error("No valid message body found");
         return res.sendStatus(400);
       }
   
+      // add email address
       // Check if user exists, if not send template message
       if (!userSessions[from]) {
         userSessions[from] = {
           userName: user_name,
           fullName: null,
+          email:null,
           phoneNumber: from,
           companyName: null,
           issueType: null,
@@ -217,7 +221,6 @@ app.get("/webhooks", (req, res) => {
         userSession.stage = "issueType";
         return res.sendStatus(200);
       }
-    
        
       // Get company name from user
       if (userSession.stage === "awaitingCompanyName") {
@@ -225,11 +228,15 @@ app.get("/webhooks", (req, res) => {
         userSession.stage = "awaitingName";
          reply = "Please provide us with your full name.\nSee EXAMPLE:\nThomas Roads"
       
-      } else if(userSession.stage == "awaitingName"){
-       userSession.fullName = msg_body;
-       userSession.stage = "issueType";
+      }else if(userSession.stage == "awaitingName"){
+        userSession.fullName = msg_body;
+        userSession.stage = "awaitingEmail";
+        reply = "Please provide us with your email address.\nSee EXAMPLE:\nthomasroads@gmail.com"
+      }
+      else if(userSession.stage == "awaitingEmail"){
+        userSession.email = msg_body;
+        userSession.stage = "issueType";
       sendCustomerSupportList(phone_no_id, from, userSession.fullName);
-       
       }
       else if (userSession.stage === "issueType") {
         userSession.issueType = msg_body; // Store the selected category
