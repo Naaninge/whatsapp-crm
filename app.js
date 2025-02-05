@@ -161,10 +161,12 @@ app.get("/webhooks", (req, res) => {
 
   // Function to save session to MongoDB
   
-  app.post("/webhooks", async (req, res) => {
+  app.post("/webhooks", async (req, res) => { 
     let body_param = req.body;
     console.log(JSON.stringify(body_param, null, 2));
   
+// Setting up Webhook logic to retrieve data from Webhook
+
     if (
       body_param.object &&
       body_param.entry &&
@@ -172,18 +174,24 @@ app.get("/webhooks", (req, res) => {
       body_param.entry[0].changes[0].value.messages &&
       body_param.entry[0].changes[0].value.messages[0]
     ) {
+      // Retrieving phone number id from webhook, storing it in variable.
       let phone_no_id =
         body_param.entry[0].changes[0].value.metadata.phone_number_id;
+
+      // Retrieving Sender's phone number from webhook, storing it in variable.
       let from = body_param.entry[0].changes[0].value.messages[0].from;
+
+      // Retrieving message sent on WhatsApp, from webhook, storing it in variable.
       let message = body_param.entry[0].changes[0].value.messages[0];
   
+      // Retrieving Sender's Username from webhook, storing it in variable.
       let user_name =
         body_param.entry[0].changes[0].value.contacts &&
         body_param.entry[0].changes[0].value.contacts[0].profile.name
           ? body_param.entry[0].changes[0].value.contacts[0].profile.name
           : "Unknown";
   
-      // Check if it's a text message or interactive reply
+      // Check if it's a text message or interactive reply.
       let msg_body = message.text?.body || message.interactive?.list_reply?.id;
   
       if (!msg_body) {
@@ -191,7 +199,8 @@ app.get("/webhooks", (req, res) => {
         return res.sendStatus(400);
       }
   
-      // Check if user exists, if not send template message
+      // Check if user exists, if not send template message.
+      // Creates userSession object with the following attributes.
       if (!userSessions[from]) {
         userSessions[from] = {
           userName: user_name,
@@ -203,11 +212,13 @@ app.get("/webhooks", (req, res) => {
           stage: "welcomeMessage",
         };
   
+        // Sends Welcome Message
         sendWelcomeMessage(phone_no_id, from, user_name);
         userSessions[from].stage = "awaitingCompanyName";
         return res.sendStatus(200);
       }
   
+      // Assigns userSession object to current user's unique phone number.
       const userSession = userSessions[from];
       let reply = "";
   
@@ -219,27 +230,35 @@ app.get("/webhooks", (req, res) => {
       }
     
        
-      // Get company name from user
+      // Get company name from user.
       if (userSession.stage === "awaitingCompanyName") {
         userSession.companyName = msg_body;
         userSession.stage = "awaitingName";
          reply = "Please provide us with your full name.\nSee EXAMPLE:\nThomas Roads"
       
+      // Get full name from user.
+      // Sends Customer Support list.  
       } else if(userSession.stage == "awaitingName"){
        userSession.fullName = msg_body;
        userSession.stage = "issueType";
       sendCustomerSupportList(phone_no_id, from, userSession.fullName);
        
       }
+
+      /////////// Editing ////////////
+      // Customer Support list selection
       else if (userSession.stage === "issueType") {
         userSession.issueType = msg_body; // Store the selected category
         selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,userSession.fullName)
         userSession.stage = "specificIssue";
-      } else if (userSession.stage === "specificIssue") {
+      } 
+      
+      else if (userSession.stage === "specificIssue") {
         if (msg_body === "6") {
           reply = "Please describe the issue you are facing.";
           userSession.stage = "issueDescription";
         } else {
+          // Issue stored in variables
           const category = userSession.issueType.split(" ")[0];
           const issueList = issuesMap[category];
           const selectedIndex = parseInt(msg_body) - 1;
@@ -251,11 +270,16 @@ app.get("/webhooks", (req, res) => {
             sendDescrErrorMessage(phone_no_id, from);
           }
         }
-      } else if (userSession.stage === "issueDescription") {
+
+      } 
+
+      // User has a scpecific issue that needs describing.
+      else if (userSession.stage === "issueDescription") {
         userSession.issueDescription = msg_body;
         userSession.stage = "complete";
       }
   
+      // Last Stage
       if (userSession.stage === "complete") {
         sendClosingMessageTemplate(
           phone_no_id,
@@ -264,7 +288,7 @@ app.get("/webhooks", (req, res) => {
           userSession.issueType,
           userSession.issueDescription
         );
-        await saveSessionToDatabase(userSession);
+        await saveSessionToDatabase(userSession); // Saving userSession object to the database.
         delete userSessions[from]; // Clear session after conversation ends
       } else {
         sendWhatsAppMessage(phone_no_id, from, reply);
@@ -276,7 +300,7 @@ app.get("/webhooks", (req, res) => {
     }
   });
   
-  
+  // Function to save userSession object to the database.
   async function saveSessionToDatabase(session) {
     try {
       const collection = database.collection("userSessions");
