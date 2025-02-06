@@ -12,7 +12,7 @@ function sendWhatsAppMessage(phone_no_id,to, message) {
       data: {
         messaging_product: "whatsapp",
         to: to,
-        text: { body: message },
+        text: {body: message },
       },
       headers: {
         "Content-Type": "application/json",

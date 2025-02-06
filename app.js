@@ -185,7 +185,7 @@ app.get("/webhooks", (req, res) => {
           : "Unknown";
   
       // Check if it's a text message or interactive reply
-      let msg_body = message.text?.body || message.interactive?.list_reply?.id;
+      let msg_body = message.text?.body || message.interactive?.list_reply
   
       // add session timer 
       if (!msg_body) {
@@ -197,6 +197,7 @@ app.get("/webhooks", (req, res) => {
       // Check if user exists, if not send template message
       if (!userSessions[from]) {
         userSessions[from] = {
+          ticketId: null,
           userName: user_name,
           fullName: null,
           email:null,
@@ -239,7 +240,10 @@ app.get("/webhooks", (req, res) => {
        sendCustomerSupportList(phone_no_id, from, userSession.fullName);
       }
       else if (userSession.stage === "issueType") {
-        userSession.issueType = msg_body; // Store the selected category
+        msg_body = msg_body.id;
+        console.log(msg_body)
+        userSession.ticketId = msg_body +"_";
+        userSession.issueType = msg_body;
         selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,userSession.fullName)
         userSession.stage = "specificIssue";
       } else if (userSession.stage === "specificIssue") {
@@ -247,7 +251,9 @@ app.get("/webhooks", (req, res) => {
           reply = "Please describe the issue you are facing.";
           userSession.stage = "issueDescription";
         } else {
-          const selectedMsg = msg_body
+          const selectedMsg =  msg_body.description
+          const descriptionId =  msg_body.id
+          userSession.ticketId += descriptionId;
           console.log(selectedMsg);
           const selectedDescription = selectedMsg || "No description provided.";
   
@@ -264,6 +270,7 @@ app.get("/webhooks", (req, res) => {
       }
   
       if (userSession.stage === "complete") {
+       
         sendClosingMessageTemplate(
           phone_no_id,
           from,
