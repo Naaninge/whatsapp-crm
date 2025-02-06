@@ -8,6 +8,9 @@ const {  selectIssue,
   sendWhatsAppMessage ,
   sendIssueTypeMessage,sendCustomerSupportList} = require('./utils.js');
 const {sendDescrErrorMessage} = require('./errorMessages.js')
+const {validateNameInput} = require('./validation.js')
+
+
 
 
 const app = express().use(body_parser.json());
@@ -227,15 +230,24 @@ app.get("/webhooks", (req, res) => {
       if (userSession.stage === "awaitingCompanyName") {
         userSession.companyName = msg_body;
         userSession.stage = "awaitingName";
-         reply = "Please provide us with your full name.\nSee EXAMPLE:\nThomas Roads"
+        reply= "Please provide us with your full name.\nSee EXAMPLE:\nThomas Roads"
+        //  errorMessage = "Oops! That doesn't look like a valid name. Please enter only letters (A-Z) without numbers or special characters. 😊";
+        // reply = validateNameInput(msg_body,successMessage,errorMessage,userSession.stage)
       
       }else if(userSession.stage == "awaitingName"){
-        userSession.fullName = msg_body;
-        userSession.stage = "awaitingEmail";
-        reply = "Please provide us with your email address.\nSee EXAMPLE:\nthomasroads@gmail.com"
+        // function to check if the name is correct format
+        if(validateNameInput(msg_body,userSession)){
+          userSession.fullName = msg_body;
+          reply= "Please provide us with your email address.\nSee EXAMPLE:\nthomasroads@gmail.com"
+
+        }else{
+          reply = "Oops! That doesn't look like a valid name. Please enter only letters (A-Z) without numbers or special characters. 😊";
+        }
+       
       }
       else if(userSession.stage == "awaitingEmail"){
         userSession.email = msg_body;
+        // function to check if the email is the correct format
         userSession.stage = "issueType";
        sendCustomerSupportList(phone_no_id, from, userSession.fullName);
       }

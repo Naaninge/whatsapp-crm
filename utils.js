@@ -286,7 +286,7 @@ function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList,use
             return;
         default:
             // error message 
-            reply = "❌ Oops! I didn’t catch that. Please enter a valid option . 😊🔄";
+            reply = "Oops! It looks like you typed instead of selecting from the list. Please tap on one of the options to proceed. 😊";
             sendWhatsAppMessage(phone_no_id, to, reply);
             return;
     }
