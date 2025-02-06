@@ -241,8 +241,7 @@ app.get("/webhooks", (req, res) => {
       }
       else if (userSession.stage === "issueType") {
         msg_body = msg_body.id;
-        console.log(msg_body)
-        userSession.ticketId = msg_body +"_";
+        
         userSession.issueType = msg_body;
         selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,userSession.fullName)
         userSession.stage = "specificIssue";
@@ -251,9 +250,8 @@ app.get("/webhooks", (req, res) => {
           reply = "Please describe the issue you are facing.";
           userSession.stage = "issueDescription";
         } else {
-          const selectedMsg =  msg_body.description
-          const descriptionId =  msg_body.id
-          userSession.ticketId += descriptionId;
+          const selectedMsg =  msg_body.description;
+          userSession.ticketId = msg_body.id;
           console.log(selectedMsg);
           const selectedDescription = selectedMsg || "No description provided.";
   
