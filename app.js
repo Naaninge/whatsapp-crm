@@ -221,7 +221,7 @@ app.get("/webhooks", (req, res) => {
       let regex;
   
       // Return to main menu
-      if (msg_body === "0") {
+      if (msg_body === "back") {
         sendCustomerSupportList(phone_no_id,from, user_name);
         userSession.stage = "issueType";
         return res.sendStatus(200);
@@ -267,7 +267,7 @@ app.get("/webhooks", (req, res) => {
         selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,userSession.fullName)
         userSession.stage = "specificIssue";
       } else if (userSession.stage === "specificIssue") {
-        if (msg_body === "other") {
+        if (msg_body.title.toLowerCase() === "other") {
           reply = "Please describe the issue you are facing.";
           userSession.stage = "issueDescription";
         } else {

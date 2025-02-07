@@ -247,7 +247,7 @@ function sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList)
 // Function to show the description of the issueType
 function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList,username) {
   
-    if (msg_body === "0") {
+    if (msg_body === "back") {
         // User wants to go back to issue type selection
         sendCustomerSupportList(phone_no_id,to, username);
         userSession.stage = "issueType";

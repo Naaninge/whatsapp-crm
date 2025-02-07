@@ -27,7 +27,7 @@ function sendDescrErrorMessage(phone_no_id,to) {
                 },
                 {
                     type: "text", 
-                    text: "0",
+                    text: "back",
                   }
         
               ]
