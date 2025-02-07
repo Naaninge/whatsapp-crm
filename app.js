@@ -8,7 +8,7 @@ const {  selectIssue,
   sendWhatsAppMessage ,
   sendIssueTypeMessage,sendCustomerSupportList} = require('./utils.js');
 const {sendDescrErrorMessage} = require('./errorMessages.js')
-const {validateNameInput} = require('./validation.js')
+const {validateNameInput,inputValidation} = require('./validation.js')
 
 
 
@@ -218,6 +218,7 @@ app.get("/webhooks", (req, res) => {
   
       const userSession = userSessions[from];
       let reply = "";
+      let regex;
   
       // Return to main menu
       if (msg_body === "0") {
@@ -228,12 +229,17 @@ app.get("/webhooks", (req, res) => {
        
       // Get company name from user
       if (userSession.stage === "awaitingCompanyName") {
-        userSession.companyName = msg_body;
-        userSession.stage = "awaitingName";
-        reply= "Please provide us with your full name.\nSee EXAMPLE:\nThomas Roads"
-        //  errorMessage = "Oops! That doesn't look like a valid name. Please enter only letters (A-Z) without numbers or special characters. 😊";
-        // reply = validateNameInput(msg_body,successMessage,errorMessage,userSession.stage)
-      
+        // validate if company format is correct only letters and numbers included no special characters
+         regex = /^[A-Za-z0-9&-]+(?: [A-Za-z0-9&-]+)*$/; 
+        if(inputValidation(msg_body,regex,"awaitingCompanyName","awaitingName",userSession)){
+          userSession.companyName = msg_body;
+          reply= "Please provide us with your full name.\nSee EXAMPLE:\nThomas Roads"
+
+        }else{
+           reply ="Company names should contain only letters and numbers. Please remove any special symbols and try again."
+        }
+
+
       }else if(userSession.stage == "awaitingName"){
         // function to check if the name is correct format
         if(validateNameInput(msg_body,userSession)){
@@ -246,14 +252,17 @@ app.get("/webhooks", (req, res) => {
        
       }
       else if(userSession.stage == "awaitingEmail"){
-        userSession.email = msg_body;
-        // function to check if the email is the correct format
-        userSession.stage = "issueType";
-       sendCustomerSupportList(phone_no_id, from, userSession.fullName);
+        // check if the email is the correct format
+         regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+         if(inputValidation(msg_body,regex,"awaitingEmail","issueType",userSession)){
+          userSession.email = msg_body; 
+          sendCustomerSupportList(phone_no_id, from, userSession.fullName);
+         }else{
+            reply = "Hmm… that doesn’t look like an email. Make sure it follows this format: yourname@example.com."
+         }
       }
       else if (userSession.stage === "issueType") {
         msg_body = msg_body.id;
-        
         userSession.issueType = msg_body;
         selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,userSession.fullName)
         userSession.stage = "specificIssue";

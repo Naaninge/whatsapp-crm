@@ -150,68 +150,60 @@ function sendIssueTypeMessage(phone_no_id,to,username) {
   }
 
 // Function  to send the issue description message
-// function sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList) {
-//     if (!descriptionList[category] || descriptionList[category].length < 5) {
-//         console.error(`Invalid category or insufficient descriptions for: ${category}`);
-//         return;
-//     }
-
-//     try {
-//         axios.post(
-//             `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
-//             {
-//                 messaging_product: "whatsapp",
-//                 to: to,
-//                 type: "template",
-//                 template: {
-//                     name: "issue_description_message", 
-//                     language: { code: "en" },
-//                     components: [
-//                         {
-//                             type: "body",
-//                             parameters: [
-//                                 { type: "text", text: `${category.toUpperCase()} SUPPORT` },
-//                                 ...descriptionList[category].slice(0, 5).map(text => ({ type: "text", text })),
-//                                 { type: "text", text: "Other (Please describe)" },
-//                             ],
-//                         },
-//                     ],
-//                 },
-//             },
-//             { headers: { "Content-Type": "application/json" } }
-//         );
-//         console.log("Template message sent successfully");
-//     } catch (error) {
-//         console.error("Error sending template message:", error.response ? error.response.data : error.message);
-//     }
-// }
 
 
-
-function sendIssueDescriptionMessage(phone_no_id, to, category,descriptionList) {
-  // Get issues from issuesMap
+function sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList) { 
+  // Get issues from descriptionList
   const issues = descriptionList[category];
- 
+
   if (!issues || issues.length === 0) {
     console.error(`No issues found for category: ${category}`);
     return;
   }
-  
 
-  console.log(issues)
-  // Maps issues into WhatsApss Interactive List format
-  const rows = issues.map((issue, index) => ({
-    id: `${category.toLowerCase()}_issue_${index + 1}`,
-    title:category,
-    description: issue
-  }));
-  console.log(rows)
- 
-   // If no issues exist for the category, send a fallback message
-   if (rows.length === 0) {
-    console.error(`No issues found for category: ${category}`);
-    return;
+  console.log(issues);
+  
+  // Function to generate concise section titles
+  function generateTitle(issue) {
+    if (issue.includes("not responding")) return "Unresponsive System";
+    if (issue.includes("installation")) return "Installation Issue";
+    if (issue.includes("Login") || issue.includes("Password")) return "Login Issue";
+    if (issue.includes("Update")) return "Update Problem";
+    if (issue.includes("error")) return "System Error";
+    if (issue.includes("powering on")) return "Power Issue";
+    if (issue.includes("Broken screen")) return "Screen Damage";
+    if (issue.includes("Peripheral")) return "Peripheral Issue";
+    if (issue.includes("Overheating")) return "Overheating Issue";
+    if (issue.includes("compatibility")) return "Compatibility Issue";
+    if (issue.includes("Network")) return "Network Problem";
+    if (issue.includes("Server")) return "Server Issue";
+    if (issue.includes("Database")) return "Database Issue";
+    if (issue.includes("Storage")) return "Storage Issue";
+    if (issue.includes("Backup")) return "Backup Issue";
+    if (issue.includes("Printer")) return "Printer Problem";
+    if (issue.includes("Paper jam")) return "Paper Jam";
+    if (issue.includes("Low print quality")) return "Print Quality Issue";
+    if (issue.includes("driver")) return "Driver Issue";
+    if (issue.includes("Connectivity")) return "Connectivity Issue";
+    return "Other Issues"; // Default fallback title
   }
+
+  // Maps issues into WhatsApp Interactive List format with concise titles
+  const rows = issues.map((issue, index) => ({
+    id: `${category.toLowerCase().replace(/\s+/g, '_')}_issue_${index + 1}`,
+    title: generateTitle(issue), // Generate short title
+    description: issue // Keep full issue description
+  }));
+
+  // Add an "Other" option at the end
+  rows.push({
+    id: `${category.toLowerCase().replace(/\s+/g, '_')}_issue_other`,
+    title: "Other",
+    description: "Specify a different issue"
+  });
+
+  console.log(rows);
+
   axios({
     method: "POST",
     url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
@@ -226,17 +218,16 @@ function sendIssueDescriptionMessage(phone_no_id, to, category,descriptionList) 
           text: `${category} Issues`
         },
         body: {
-          text: `Please select a ${category} description below: `
+          text: `Please select a description under ${category}:`
         },
         footer: {
-          text: "Powered by Green Enterprise "
+          text: "Powered by Green Enterprise"
         },
         action: {
           button: "Select Description",
           sections: [
             {
-              
-              title: `${category}`,
+              title: `${category} Issues`, // Category-specific section title
               rows: rows
             }
           ]
@@ -250,6 +241,7 @@ function sendIssueDescriptionMessage(phone_no_id, to, category,descriptionList) 
   .then(() => console.log("Customer support list message sent successfully"))
   .catch(error => console.error("Error sending message:", error.response ? error.response.data : error.message));
 }
+
 
 
 // Function to show the description of the issueType

@@ -23,6 +23,25 @@ function validateNameInput(message,session){
     
     return isValid;
 }
+//This function checks whether user entered correct format of messages
+function inputValidation(message,regex,currentStage,nextStage,session){
+  
+    
+     isValid = false;
+     
+    if(regex.test(message) && session.stage == currentStage){
+        isValid = true;
+        session.stage = nextStage;
+        
+    }else{
+        isValid = false;
+        session.stage = currentStage;
+       
+    }
+
+    
+    return isValid;
+}
 
 
-module.exports= {validateNameInput}
+module.exports= {validateNameInput,inputValidation}
