@@ -267,14 +267,15 @@ app.get("/webhooks", (req, res) => {
         selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,userSession.fullName)
         userSession.stage = "specificIssue";
       } else if (userSession.stage === "specificIssue") {
-        if (msg_body.title.toLowerCase() === "other") {
+        if (msg_body.interactive && msg_body.interactive.list_reply.title.toLowerCase().startsWith("other")) {
+          userSession.ticketId = msg_body.id;
           reply = "Please describe the issue you are facing.";
           userSession.stage = "issueDescription";
         } else {
           const selectedMsg =  msg_body.description;
           userSession.ticketId = msg_body.id;
           console.log(selectedMsg);
-          const selectedDescription = selectedMsg || "No description provided.";
+          const selectedDescription = selectedMsg || msg_body;
   
           if (selectedDescription) {
             userSession.issueDescription = selectedDescription;
@@ -287,7 +288,7 @@ app.get("/webhooks", (req, res) => {
         userSession.issueDescription = msg_body;
         userSession.stage = "complete";
       }
-  
+      
       if (userSession.stage === "complete") {
        
         sendClosingMessageTemplate(

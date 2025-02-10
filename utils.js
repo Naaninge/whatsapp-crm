@@ -150,7 +150,29 @@ function sendIssueTypeMessage(phone_no_id,to,username) {
   }
 
 // Function  to send the issue description message
-
+function generateTitle(issue) {
+  if (issue.includes("not responding")) return "Unresponsive System";
+  if (issue.includes("installation")) return "Installation Issue";
+  if (issue.includes("Login") || issue.includes("Password")) return "Login Issue";
+  if (issue.includes("Update")) return "Update Problem";
+  if (issue.includes("error")) return "System Error";
+  if (issue.includes("powering on")) return "Power Issue";
+  if (issue.includes("Broken screen")) return "Screen Damage";
+  if (issue.includes("Peripheral")) return "Peripheral Issue";
+  if (issue.includes("Overheating")) return "Overheating Issue";
+  if (issue.includes("compatibility")) return "Compatibility Issue";
+  if (issue.includes("Network")) return "Network Problem";
+  if (issue.includes("Server")) return "Server Issue";
+  if (issue.includes("Database")) return "Database Issue";
+  if (issue.includes("Storage")) return "Storage Issue";
+  if (issue.includes("Backup")) return "Backup Issue";
+  if (issue.includes("Printer")) return "Printer Problem";
+  if (issue.includes("Paper jam")) return "Paper Jam";
+  if (issue.includes("Low print quality")) return "Print Quality Issue";
+  if (issue.includes("driver")) return "Driver Issue";
+  if (issue.includes("Connectivity")) return "Connectivity Issue";
+  return "Other Issues"; // Default fallback title
+}
 
 function sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList) { 
   // Get issues from descriptionList
@@ -163,31 +185,7 @@ function sendIssueDescriptionMessage(phone_no_id, to, category, descriptionList)
 
   console.log(issues);
   
-  // Function to generate concise section titles
-  function generateTitle(issue) {
-    if (issue.includes("not responding")) return "Unresponsive System";
-    if (issue.includes("installation")) return "Installation Issue";
-    if (issue.includes("Login") || issue.includes("Password")) return "Login Issue";
-    if (issue.includes("Update")) return "Update Problem";
-    if (issue.includes("error")) return "System Error";
-    if (issue.includes("powering on")) return "Power Issue";
-    if (issue.includes("Broken screen")) return "Screen Damage";
-    if (issue.includes("Peripheral")) return "Peripheral Issue";
-    if (issue.includes("Overheating")) return "Overheating Issue";
-    if (issue.includes("compatibility")) return "Compatibility Issue";
-    if (issue.includes("Network")) return "Network Problem";
-    if (issue.includes("Server")) return "Server Issue";
-    if (issue.includes("Database")) return "Database Issue";
-    if (issue.includes("Storage")) return "Storage Issue";
-    if (issue.includes("Backup")) return "Backup Issue";
-    if (issue.includes("Printer")) return "Printer Problem";
-    if (issue.includes("Paper jam")) return "Paper Jam";
-    if (issue.includes("Low print quality")) return "Print Quality Issue";
-    if (issue.includes("driver")) return "Driver Issue";
-    if (issue.includes("Connectivity")) return "Connectivity Issue";
-    return "Other Issues"; // Default fallback title
-  }
-
+ 
   // Maps issues into WhatsApp Interactive List format with concise titles
   const rows = issues.map((issue, index) => ({
     id: `${category.toLowerCase().replace(/\s+/g, '_')}_issue_${index + 1}`,
@@ -269,7 +267,7 @@ function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList,use
         case "printing":
             userSession.issueType = "Printing Issue";
             break;
-        case "other":
+        case "other_general":
             userSession.issueType = "Other";
             userSession.stage = "issueDescription";
             reply = "Please describe the issue you are facing.";
@@ -321,7 +319,7 @@ function sendCustomerSupportList(phone_no_id, to, username) {
                 { id: "hardware_support", title: "Hardware Support", description: "Issues related to computers, servers, and other hardware." },
                 { id: "infrastructure", title: "Infrastructure Support", description: "Networking, cloud services, and IT infrastructure solutions." },
                 { id: "printing", title: "Printing Support", description: "Printer setup, maintenance, and troubleshooting." },
-                { id: "other", title: "Other Inquiries", description: "General IT support and consultations." }
+                { id: "other_general", title: "Other Inquiries", description: "General IT support and consultations." }
               ]
             }
           ]
