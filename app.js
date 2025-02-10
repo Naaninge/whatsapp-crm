@@ -6,7 +6,7 @@ const {  selectIssue,
   sendClosingMessageTemplate, 
   sendWelcomeMessage, 
   sendWhatsAppMessage ,
-  sendIssueTypeMessage,sendCustomerSupportList} = require('./utils.js');
+  sendIssueTypeMessage,sendCustomerSupportList,sendconfirmationMessageTemplate} = require('./utils.js');
 const {sendDescrErrorMessage} = require('./errorMessages.js')
 const {validateNameInput,inputValidation} = require('./validation.js')
 
@@ -267,26 +267,58 @@ app.get("/webhooks", (req, res) => {
         selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,userSession.fullName)
         userSession.stage = "specificIssue";
       } else if (userSession.stage === "specificIssue") {
-        if (msg_body.interactive && msg_body.interactive.list_reply.title.toLowerCase().startsWith("other")) {
+        if ( msg_body.interactive && msg_body.interactive.list_reply && msg_body.interactive.list_reply.title.toLowerCase().startsWith("other")) {
           userSession.ticketId = msg_body.id;
           reply = "Please describe the issue you are facing.";
           userSession.stage = "issueDescription";
         } else {
           const selectedMsg =  msg_body.description;
           userSession.ticketId = msg_body.id;
-          console.log(selectedMsg);
+          // console.log(selectedMsg);
           const selectedDescription = selectedMsg || msg_body;
   
-          if (selectedDescription) {
+           // Both of these below should take to User Confirmation
+           if (selectedDescription) {
             userSession.issueDescription = selectedDescription;
-            userSession.stage = "complete";
+            userSession.stage = "confirmation"; //confirmation
           } else {
             sendDescrErrorMessage(phone_no_id, from);
           }
         }
       } else if (userSession.stage === "issueDescription") {
         userSession.issueDescription = msg_body;
-        userSession.stage = "complete";
+        userSession.stage = "confirmation"; //confirmation
+      }
+
+      // User confirmation
+      if (userSession.stage === "confirmation") {
+
+        sendconfirmationMessageTemplate(
+          phone_no_id,
+          from,
+          userSession.companyName,
+          userSession.issueType,
+          userSession.userName,
+          userSession.email,
+          userSession.issueDescription
+        );
+
+        // Check if msg_body exists and contains a button reply
+       let msg =
+       body_param?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.button?.text || 
+       "Valid message body not found";
+
+        console.log("confirmation >>>>");
+        
+        console.log("User response:", msg);
+    
+        if (msg.toLowerCase().startsWith("yes")) {
+            userSession.stage = "complete";
+        } else if (msg.toLowerCase().startsWith("no")) {
+            userSession.stage = "welcomeMessage";
+            sendWelcomeMessage(phone_no_id, from, userSession.userName);
+        }
+
       }
       
       if (userSession.stage === "complete") {

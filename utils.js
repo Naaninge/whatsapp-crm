@@ -149,6 +149,56 @@ function sendIssueTypeMessage(phone_no_id,to,username) {
           .catch(error => console.error("Error sending closing message template:", JSON.stringify(error.response?.data || error.message, null, 2)));
   }
 
+  function sendconfirmationMessageTemplate(phone_no_id,to,company,issue,username,email,description) {
+    axios({
+        method: "POST",
+        url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+        data: {
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to: to,
+            type: "template",
+            template: {
+                name: "confirmation_message",
+                language: { code: "en" },
+                components: [
+                  {
+                    type: "body",
+                    parameters: [
+                      {
+                        type: "text",
+                        text: company.toUpperCase(),
+                      },
+                      {
+                        type: "text",
+                        text: username.toUpperCase(),
+                      },
+                      {
+                        type: "text",
+                        text: email.toUpperCase(),
+                      },
+                      {
+                        type: "text",
+                        text: issue.toUpperCase(),
+                      },
+                      {
+                        type: "text",
+                        text: description.toUpperCase(),
+                      }
+                    ]
+                },
+    
+                ]
+            }
+        },
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+        .then(() => console.log("Confirmation message template sent successfully"))
+        .catch(error => console.error("Error sending confirmation message template:", JSON.stringify(error.response?.data || error.message, null, 2)));
+}
+
 // Function  to send the issue description message
 function generateTitle(issue) {
   if (issue.includes("not responding")) return "Unresponsive System";
@@ -338,4 +388,10 @@ function sendCustomerSupportList(phone_no_id, to, username) {
 
 
 
-module.exports = {selectIssue,sendWelcomeMessage,sendClosingMessageTemplate,sendWhatsAppMessage,sendIssueTypeMessage,sendIssueDescriptionMessage,sendCustomerSupportList}
+module.exports = {selectIssue,
+  sendWelcomeMessage,
+  sendClosingMessageTemplate,
+  sendWhatsAppMessage,
+  sendIssueTypeMessage,
+  sendIssueDescriptionMessage,
+  sendCustomerSupportList,sendconfirmationMessageTemplate}
