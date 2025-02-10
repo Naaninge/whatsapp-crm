@@ -213,6 +213,7 @@ app.get("/webhooks", (req, res) => {
   
         sendWelcomeMessage(phone_no_id, from, user_name);
         userSessions[from].stage = "awaitingCompanyName";
+        startSessionTimout(from); // Start timeout
         return res.sendStatus(200);
       }
   
@@ -224,6 +225,7 @@ app.get("/webhooks", (req, res) => {
       if (msg_body === "back") {
         sendCustomerSupportList(phone_no_id,from, user_name);
         userSession.stage = "issueType";
+        resetSessionTimeout(from);
         return res.sendStatus(200);
       }
        
@@ -234,9 +236,10 @@ app.get("/webhooks", (req, res) => {
         if(inputValidation(msg_body,regex,"awaitingCompanyName","awaitingName",userSession)){
           userSession.companyName = msg_body;
           reply= "Please provide us with your full name.\nSee EXAMPLE:\nThomas Roads"
-
+          resetSessionTimeout(from);
         }else{
            reply ="Company names should contain only letters and numbers. Please remove any special symbols and try again."
+           resetSessionTimeout(from);
         }
 
 
@@ -245,9 +248,10 @@ app.get("/webhooks", (req, res) => {
         if(validateNameInput(msg_body,userSession)){
           userSession.fullName = msg_body;
           reply= "Please provide us with your email address.\nSee EXAMPLE:\nthomasroads@gmail.com"
-
+          resetSessionTimeout(from);
         }else{
           reply = "Oops! That doesn't look like a valid name. Please enter only letters (A-Z) without numbers or special characters. 😊";
+          resetSessionTimeout(from);
         }
        
       }
@@ -257,8 +261,10 @@ app.get("/webhooks", (req, res) => {
          if(inputValidation(msg_body,regex,"awaitingEmail","issueType",userSession)){
           userSession.email = msg_body; 
           sendCustomerSupportList(phone_no_id, from, userSession.fullName);
+          resetSessionTimeout(from);
          }else{
             reply = "Hmm… that doesn’t look like an email. Make sure it follows this format: yourname@example.com."
+            resetSessionTimeout(from);
          }
       }
       else if (userSession.stage === "issueType") {
@@ -271,24 +277,50 @@ app.get("/webhooks", (req, res) => {
           userSession.ticketId = msg_body.id;
           reply = "Please describe the issue you are facing.";
           userSession.stage = "issueDescription";
+          resetSessionTimeout(from);
         } else {
           const selectedMsg =  msg_body.description;
           userSession.ticketId = msg_body.id;
           console.log(selectedMsg);
           const selectedDescription = selectedMsg || msg_body;
   
+          
+          // Both of these below should take to User Confirmation
           if (selectedDescription) {
             userSession.issueDescription = selectedDescription;
-            userSession.stage = "complete";
+            userSession.stage = "confirmation"; //confirmation
           } else {
             sendDescrErrorMessage(phone_no_id, from);
           }
         }
       } else if (userSession.stage === "issueDescription") {
         userSession.issueDescription = msg_body;
-        userSession.stage = "complete";
+        userSession.stage = "confirmation"; //confirmation
       }
       
+      // User confirmation
+      if (userSession.stage === "confirmation") {
+        sendConfirmationMessage(
+          phone_no_id,
+          from,
+          userSession.companyName,
+          userSession.issueType,
+          userSession.issueDescription
+        );
+        resetSessionTimeout(from);
+        if (msg_body === "Yes") {
+          userSession.stage = "complete";
+        } else if (msg_body === "No") {
+          userSession.stage = "welcomeMessage",
+          sendWelcomeMessage (
+            phone_no_id, from, user_name
+          );
+          resetSessionTimeout(from);
+        }
+        
+      }
+
+
       if (userSession.stage === "complete") {
        
         sendClosingMessageTemplate(
@@ -299,6 +331,8 @@ app.get("/webhooks", (req, res) => {
           userSession.issueDescription
         );
         await saveSessionToDatabase(userSession);
+        clearTimeout(userSession[from].warningTimeout);
+        clearTimeout(userSession[from].terminationTimeout);
         delete userSessions[from]; // Clear session after conversation ends
       } else {
         sendWhatsAppMessage(phone_no_id, from, reply);

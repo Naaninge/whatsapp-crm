@@ -278,6 +278,7 @@ function selectIssue(msg_body, userSession, phone_no_id, to, descriptionList,use
             // error message 
             reply = "Oops! It looks like you typed instead of selecting from the list. Please tap on one of the options to proceed. 😊";
             sendWhatsAppMessage(phone_no_id, to, reply);
+            resetSessionTimeout(from);
             return;
     }
 
@@ -334,8 +335,43 @@ function sendCustomerSupportList(phone_no_id, to, username) {
   .catch(error => console.error("Error sending message:", error.response ? error.response.data : error.message));
 }
 
+// Function to send confirmation message
+// function sendConfirmationMessage(phone_no_id,to,company,issue,description) {
 
+// }
 
+// Function to start the timeout.
+function startSessionTimout(from) {
+  if (!userSession[from]) return; // Ensures the session exists
+
+  // Clear any existing timeouts before setting new ones
+  clearTimeout(userSession[from].warningTimeout);
+  clearTimeout(userSession[from].terminationTimeout);
+
+  // Sends warning message after 5 seconds
+  userSession[from].warningTimeout = setTimeout(() => {
+    reply = "Warning! Send a response within 5 minutes or form will terminate",
+    console.log("5 seconds passed");
+  }, 5000);
+
+  //Sends termination message
+  userSession[from].terminationTimeout = setTimeout(() => {
+    reply = "Form Terminated! More than 5 minutes has passed. Type a new message to begin reporting your issue again.",
+    console.log("10 seconds passed");
+    delete userSessions[from];
+  }, 10000);
+}
+
+// Function to reset the timeout after user sends message
+function resetSessionTimout(from) {
+  if (!userSession[from]) return;
+
+  clearTimeout(userSession[from].warningTimeout);
+  clearTimeout(userSession[from].terminationTimeout);
+
+  //Restart timeout when new message is received
+  startSessionTimout(from);
+}
 
 
 module.exports = {selectIssue,sendWelcomeMessage,sendClosingMessageTemplate,sendWhatsAppMessage,sendIssueTypeMessage,sendIssueDescriptionMessage,sendCustomerSupportList}
