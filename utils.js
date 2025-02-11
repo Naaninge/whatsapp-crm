@@ -149,7 +149,7 @@ function sendIssueTypeMessage(phone_no_id,to,username) {
           .catch(error => console.error("Error sending closing message template:", JSON.stringify(error.response?.data || error.message, null, 2)));
   }
 
-  function sendconfirmationMessageTemplate(phone_no_id,to,company,issue,username,email,description) {
+  function sendconfirmationMessageTemplate(phone_no_id, to, company, issue, username, email, description) {
     axios({
         method: "POST",
         url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
@@ -157,49 +157,99 @@ function sendIssueTypeMessage(phone_no_id,to,username) {
             messaging_product: "whatsapp",
             recipient_type: "individual",
             to: to,
-            type: "template",
-            template: {
-                name: "confirmation_message",
-                language: { code: "en" },
-                components: [
-                  {
-                    type: "body",
-                    parameters: [
-                      {
-                        type: "text",
-                        text: company.toUpperCase(),
-                      },
-                      {
-                        type: "text",
-                        text: username.toUpperCase(),
-                      },
-                      {
-                        type: "text",
-                        text: email.toUpperCase(),
-                      },
-                      {
-                        type: "text",
-                        text: issue.toUpperCase(),
-                      },
-                      {
-                        type: "text",
-                        text: description.toUpperCase(),
-                      }
-                    ]
+            type: "interactive",
+            interactive: {
+                type: "button",
+                header: {
+                    type: "text",
+                    text: "Confirm these details:"
                 },
-    
-                ]
+                body: {
+                    text: `🏢 *Company:* ${company}\n👤 *Name:* ${username}\n📧 *Email:* ${email}\n🛠️ *Issue:* ${issue}\n📝 *Description:* ${description}\n\nIs this information correct?\nBy submitting this form, you consent to Green Enterprise Solutions storing and processing your information, including communicating with you via WhatsApp regarding our services. You can opt out at any time by replying 'STOP'.`
+                },
+                footer: {
+                    text: "Tap Confirm to proceed or Cancel to modify your request."
+                },
+                action: {
+                    buttons: [
+                        {
+                            type: "reply",
+                            reply: {
+                                id: "yes_confirm",
+                                title: "✅ Confirm"
+                            }
+                        },
+                        {
+                            type: "reply",
+                            reply: {
+                                id: "no_cancel",
+                                title: "❌ Cancel"
+                            }
+                        }
+                    ]
+                }
             }
         },
         headers: {
             "Content-Type": "application/json"
         }
     })
-        .then(() => console.log("Confirmation message template sent successfully"))
-        .catch(error => console.error("Error sending confirmation message template:", JSON.stringify(error.response?.data || error.message, null, 2)));
+    .then(() => console.log("Confirmation message sent successfully"))
+    .catch(error => console.error("Error sending confirmation message:", JSON.stringify(error.response?.data || error.message, null, 2)));
 }
 
-// Function  to send the issue description message
+
+//   function sendconfirmationMessageTemplate(phone_no_id,to,company,issue,username,email,description) {
+//     axios({
+//         method: "POST",
+//         url: `https://graph.facebook.com/v21.0/${phone_no_id}/messages?access_token=${token}`,
+//         data: {
+//             messaging_product: "whatsapp",
+//             recipient_type: "individual",
+//             to: to,
+//             type: "template",
+//             template: {
+//                 name: "confirmation_message",
+//                 language: { code: "en" },
+//                 components: [
+//                   {
+//                       type: "body",
+//                       parameters: [
+//                           { type: "text", text: company.toUpperCase() },
+//                           { type: "text", text: username.toUpperCase() },
+//                           { type: "text", text: email.toUpperCase() },
+//                           { type: "text", text: issue.toUpperCase() },
+//                           { type: "text", text: description.toUpperCase() }
+//                       ]
+//                   },
+//                   {
+//                       type: "button",
+//                       sub_type: "quick_reply",
+//                       index: "0",
+//                       parameters: [{ type: "payload", payload: "Yes, submit" }]
+//                   },
+//                   {
+//                       type: "button",
+//                       sub_type: "quick_reply",
+//                       index: "1",
+//                       parameters: [{ type: "payload", payload: "No, cancel" }]
+//                   }
+//               ]       
+            
+//             }
+//         },
+//         headers: {
+//             "Content-Type": "application/json"
+//         }
+//     })
+//         .then(() => console.log("Confirmation message template sent successfully"))
+//         .catch(error => console.error("Error sending confirmation message template:", JSON.stringify(error.response?.data || error.message, null, 2)));
+// }
+
+//Function  to send the issue description message
+
+
+
 function generateTitle(issue) {
   if (issue.includes("not responding")) return "Unresponsive System";
   if (issue.includes("installation")) return "Installation Issue";
@@ -354,7 +404,7 @@ function sendCustomerSupportList(phone_no_id, to, username) {
           text: "Customer Support Services"
         },
         body: {
-          text: `${username}, how can we assist you today? Please select a service below.`
+          text: `*${username}, how can we assist you today? Please select a service below.`
         },
         footer: {
           text: "Powered by Green Enterprise "

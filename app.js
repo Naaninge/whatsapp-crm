@@ -65,104 +65,6 @@ app.get("/webhooks", (req, res) => {
   }
 });
 
-
-
-
-//   let body_param = req.body;
-//   console.log(JSON.stringify(body_param, null, 2));
-
-//   if (
-//     body_param.object &&
-//     body_param.entry &&
-//     body_param.entry[0].changes &&
-//     body_param.entry[0].changes[0].value.messages &&
-//     body_param.entry[0].changes[0].value.messages[0]
-//   ) {
-//     let phone_no_id =
-//       body_param.entry[0].changes[0].value.metadata.phone_number_id;
-//     let from = body_param.entry[0].changes[0].value.messages[0].from;
-//     let msg_body = body_param.entry[0].changes[0].value.messages[0].text.body;
-
-//     let user_name =
-//       body_param.entry[0].changes[0].value.contacts &&
-//       body_param.entry[0].changes[0].value.contacts[0].profile.name
-//         ? body_param.entry[0].changes[0].value.contacts[0].profile.name
-//         : "Unknown";
-
-//     // Check if user exists, if not send template message
-//     if (!userSessions[from]) {
-//       userSessions[from] = {
-//         userName: user_name,
-//         phoneNumber: from,
-//         companyName: null,
-//         issueType: null,
-//         issueDescription: null,
-//         stage: "welcomeMessage", // Start with template message
-//       };
-
-//        // Send WhatsApp Template Message instead of text
-       
-//        sendWelcomeMessage(phone_no_id, from,user_name);
-//        userSessions[from].stage = "awaitingCompanyName"; // Move to next stage
-     
-//       return res.sendStatus(200);
-//     }
-    
-//     const userSession = userSessions[from];
-//     let reply = "";
-
-//     // return to main menu
-//     if (msg_body === "0") {
-//       sendIssueTypeMessage(phone_no_id, from, userSession.userName);
-//       userSession.stage = "issueType";
-//       return res.sendStatus(200);
-//   }
-//    // get companyName from user 
-//    if (userSession.stage === "awaitingCompanyName") {
-//       userSession.companyName = msg_body;
-//       // select the type of issue e.g. Software, Hardware
-//       sendCustomerSupportList(phone_no_id, from, user_name)
-//       userSession.stage = "issueType";
-//     } else if (userSession.stage === "issueType") {
-//       // select type of issue description 
-//       selectIssue(msg_body, userSession, phone_no_id, from, issuesMap);
-//     } else if (userSession.stage === "specificIssue") { 
-//       if (msg_body === "6") {
-//         reply = "Please describe the issue you are facing.";
-//         userSession.stage = "issueDescription";
-//       } else {
-//         const category = userSession.issueType.split(" ")[0];
-//         const issueList = issuesMap[category];
-//         const selectedIndex = parseInt(msg_body) - 1;
-
-//         if (issueList && selectedIndex >= 0 && selectedIndex < issueList.length) {
-//           userSession.issueDescription = issueList[selectedIndex];
-
-//          // close  off conversation
-//          userSession.stage = "complete";
-//         } else {
-//           sendDescrErrorMessage(phone_no_id,from)
-//         }
-//       }
-//     } else if (userSession.stage === "issueDescription") {
-//       userSession.issueDescription = msg_body;
-//       // close off conversation
-//       userSession.stage = "complete";
-//     } 
-//    if (userSession.stage === "complete") {
-//       sendClosingMessageTemplate(phone_no_id, from, userSession.companyName, userSession.issueType, userSession.issueDescription);
-//       await saveSessionToDatabase(userSession);
-//       delete userSessions[from]; // Clear session after conversation ends
-//     } else {
-//       sendWhatsAppMessage(phone_no_id, from, reply);
-//     }
-//     res.sendStatus(200);
-//   } else {
-//     res.sendStatus(404);
-//   }
-// });
-
-
   // Function to save session to MongoDB
   
   app.post("/webhooks", async (req, res) => {
@@ -219,9 +121,16 @@ app.get("/webhooks", (req, res) => {
       const userSession = userSessions[from];
       let reply = "";
       let regex;
+
+      if( message.text?.body.toLowerCase() === "stop") {
+        reply = "Thank you for contacting us. Goodbye!";
+        sendWhatsAppMessage(phone_no_id, from, reply);
+        delete userSessions[from]; // Clear the session
+        return res.sendStatus(200);
+    }
   
       // Return to main menu
-      if (msg_body === "back") {
+      if (message.text?.body.toLowerCase() === "back") {
         sendCustomerSupportList(phone_no_id,from, user_name);
         userSession.stage = "issueType";
         return res.sendStatus(200);
@@ -267,6 +176,7 @@ app.get("/webhooks", (req, res) => {
         selectIssue(msg_body, userSession, phone_no_id, from, issuesMap,userSession.fullName)
         userSession.stage = "specificIssue";
       } else if (userSession.stage === "specificIssue") {
+        
         if ( msg_body.interactive && msg_body.interactive.list_reply && msg_body.interactive.list_reply.title.toLowerCase().startsWith("other")) {
           userSession.ticketId = msg_body.id;
           reply = "Please describe the issue you are facing.";
@@ -274,54 +184,44 @@ app.get("/webhooks", (req, res) => {
         } else {
           const selectedMsg =  msg_body.description;
           userSession.ticketId = msg_body.id;
-          // console.log(selectedMsg);
           const selectedDescription = selectedMsg || msg_body;
   
            // Both of these below should take to User Confirmation
            if (selectedDescription) {
             userSession.issueDescription = selectedDescription;
-            userSession.stage = "confirmation"; //confirmation
+            userSession.stage = "confirmation"; 
           } else {
             sendDescrErrorMessage(phone_no_id, from);
           }
         }
       } else if (userSession.stage === "issueDescription") {
         userSession.issueDescription = msg_body;
-        userSession.stage = "confirmation"; //confirmation
+        userSession.stage = "confirmation"; 
       }
 
-      // User confirmation
-      if (userSession.stage === "confirmation") {
+ if(userSession.stage === "confirmation"){
+// Send the confirmation message and move to the next stage
+reply = `Confirm these details:
+- Company name: ${userSession.companyName}
+- Name: ${userSession.fullName}
+- Email address: ${userSession.email}
+- Bug type: ${userSession.issueType}
+- Bug description: ${userSession.issueDescription}
 
-        sendconfirmationMessageTemplate(
-          phone_no_id,
-          from,
-          userSession.companyName,
-          userSession.issueType,
-          userSession.userName,
-          userSession.email,
-          userSession.issueDescription
-        );
-
-        // Check if msg_body exists and contains a button reply
-       let msg =
-       body_param?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.button?.text || 
-       "Valid message body not found";
-
-        console.log("confirmation >>>>");
-        
-        console.log("User response:", msg);
-    
-        if (msg.toLowerCase().startsWith("yes")) {
-            userSession.stage = "complete";
-        } else if (msg.toLowerCase().startsWith("no")) {
-            userSession.stage = "welcomeMessage";
-            sendWelcomeMessage(phone_no_id, from, userSession.userName);
-        }
-
-      }
-      
-      if (userSession.stage === "complete") {
+By submitting this form, you consent to Green Enterprise Solutions storing and processing your information, including communicating with you via WhatsApp regarding our services. Type Yes to confirm or No to start over or Stop to opt out.`;
+userSession.stage = "awaitingConfirmationResponse"; // New stage to wait for response
+} else if (userSession.stage === "awaitingConfirmationResponse") { 
+  // Handle the user's response to the confirmation message
+  if (msg_body.toLowerCase() === "yes") {
+      userSession.stage = "complete";
+  } else if (msg_body.toLowerCase() === "no") {
+      userSession.stage = "welcomeMessage";
+      sendWelcomeMessage(phone_no_id, from, user_name);
+      userSessions[from].stage = "awaitingCompanyName";
+  } else {
+      reply = "Hmm… that doesn’t look right. Make sure to write either yes or no";
+  }
+}  if (userSession.stage === "complete") {
        
         sendClosingMessageTemplate(
           phone_no_id,
